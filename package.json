@@ -12,9 +12,7 @@
   "dependencies": {
     "@hono/node-server": "^1.0.0",
     "dotenv": "^16.0.0",
-    "hono": "^4.0.0",
-    "twilio": "^4.0.0",
-    "openai": "^4.0.0"
+    "hono": "^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

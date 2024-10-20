@@ -1,5 +1,5 @@
 import OpenAI from 'openai'
-import { OPENAI_MODEL } from './config.js'
+// import { OPENAI_MODEL } from './config.js'
 
 const openai = new OpenAI()
 
@@ -10,7 +10,7 @@ export interface Message {
 
 export async function getAssistantResponse(messages: Message[]): Promise<string> {
   const chatCompletion = await openai.chat.completions.create({
-    model: OPENAI_MODEL,
+    model: 'gpt-3.5-turbo', // Default model, replace with OPENAI_MODEL if you add it to config.js
     messages,
     temperature: 0,
   })
