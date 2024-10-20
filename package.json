@@ -10,7 +10,7 @@
     "dev": "tsc -w & node --watch dist/app.js"
   },
   "dependencies": {
-    "@hono/node-server": "^1.0.0",
+    "@hono/node-server": "^1.13.2",
     "dotenv": "^16.0.0",
     "hono": "^4.0.0"
   },

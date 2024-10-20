@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Chat Interface</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .chat-container {
+            width: 300px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        #output {
+            margin-bottom: 20px;
+            min-height: 100px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div id="output">Welcome! Click the button and start speaking.</div>
+        <button id="talk">Hold to Talk</button>
+    </div>
+
+    <script>
+        const talkButton = document.getElementById('talk');
+        const output = document.getElementById('output');
+        let mediaRecorder;
+        let audioChunks = [];
+
+        talkButton.addEventListener('mousedown', startRecording);
+        talkButton.addEventListener('mouseup', stopRecording);
+        talkButton.addEventListener('mouseleave', stopRecording);
+
+        async function startRecording() {
+            audioChunks = [];
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.start();
+                output.textContent = "Listening...";
+            } catch (error) {
+                console.error('Error starting recording:', error);
+                output.textContent = "Error starting recording.";
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+                output.textContent = "Processing...";
+
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    sendAudioToServer(audioBlob);
+                };
+            }
+        }
+
+        async function sendAudioToServer(audioBlob) {
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    body: audioBlob,
+                    headers: {
+                        'Content-Type': 'audio/wav'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const responseAudioBlob = await response.blob();
+                const audioUrl = URL.createObjectURL(responseAudioBlob);
+                playAudioResponse(audioUrl);
+            } catch (error) {
+                console.error('Error:', error);
+                output.textContent = "Error occurred while processing the request.";
+            }
+        }
+
+        function playAudioResponse(audioUrl) {
+            const audio = new Audio(audioUrl);
+            audio.onended = () => {
+                output.textContent = "Response played. You can speak again.";
+            };
+            audio.onerror = (error) => {
+                console.error('Error playing audio:', error);
+                output.textContent = "Error playing audio response.";
+            };
+            audio.play().catch(error => {
+                console.error('Error playing audio:', error);
+                output.textContent = "Error playing audio response.";
+            });
+            output.textContent = "Playing response...";
+        }
+    </script>
+</body>
+</html>
