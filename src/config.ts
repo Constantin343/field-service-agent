@@ -6,6 +6,7 @@ export const PORT = process.env.PORT || 3000
 export const AIEXPLAIN_API_KEY = process.env.AIEXPLAIN_API_KEY || ''
 export const ML_API_KEY = process.env.ML_API_KEY || ''
 export const OPENAI_API_KEY = process.env.OPENAI_API_KEY || ''
+export const LLAMA_API_KEY = process.env.LLAMA_API_KEY || ''
 
 if (!AIEXPLAIN_API_KEY) {
   console.error('Missing AIEXPLAIN_API_KEY. Please check your .env file.')
@@ -19,5 +20,10 @@ if (!ML_API_KEY) {
 
 if (!OPENAI_API_KEY) {
   console.error('Missing OPENAI_API_KEY. Please check your .env file.')
+  process.exit(1)
+}
+
+if (!LLAMA_API_KEY) {
+  console.error('Missing LLAMA_API_KEY. Please check your .env file.')
   process.exit(1)
 }

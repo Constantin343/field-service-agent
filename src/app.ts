@@ -1,13 +1,23 @@
 import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { logger } from 'hono/logger'
-import { PORT, AIEXPLAIN_API_KEY, ML_API_KEY, OPENAI_API_KEY } from './config.js'
+import { PORT, AIEXPLAIN_API_KEY, ML_API_KEY, OPENAI_API_KEY, LLAMA_API_KEY } from './config.js'
 import { serveStatic } from '@hono/node-server/serve-static'
 
 const app = new Hono()
 app.use('*', logger())
 
-const systemPrompt = "You are a helpful field-service agent for a company. You can assist customers with scheduling appointments, answering questions about services, and providing basic troubleshooting."
+let messages = ""
+const infoPieces = "Which customer is the operation for? Description of the field service operation? Type of field service operation? How did the customer like the operation? What type of machine was serviced?  How long did it take? What were issues that came up?"
+
+function updateSystemPrompt() {
+  return `You are a helpful assistant that makes sure we gather all the information we need to properly document a field service operation. These are the pieces of information we need: ${infoPieces}
+
+Past context:
+${messages}
+
+Please do not request multiple pieces of information at once. Please request one piece of information at a time. Make it easy to understand and formulate the question so that it is easy to speak.`
+}
 
 app.use('/*', serveStatic({ root: './public' }))
 
@@ -72,23 +82,37 @@ async function tts(text: string): Promise<Buffer> {
 }
 
 async function chatCompletion(messages: Array<{role: string, content: string}>): Promise<string> {
-  console.log('Sending chat completion request...');
-  const response = await fetch("https://api.aimlapi.com/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${ML_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "gpt-4o",
-      messages: messages,
-      max_tokens: 512,
-      stream: false,
-    }),
-  });
-  const data = await response.json();
-  console.log('Chat completion response:', data);
-  return data.choices[0].message.content;
+  console.log('Sending chat completion request to SambaNova...');
+  try {
+    const response = await fetch("https://api.sambanova.ai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LLAMA_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "Meta-Llama-3.1-8B-Instruct",
+        messages: messages,
+        stream: false,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`SambaNova API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('Chat completion response:', data);
+
+    if (data.choices && data.choices.length > 0 && data.choices[0].message) {
+      return data.choices[0].message.content;
+    } else {
+      throw new Error('Unexpected response format from SambaNova API');
+    }
+  } catch (error) {
+    console.error('Error in chat completion:', error);
+    throw error;
+  }
 }
 
 app.post('/chat', async (c) => {
@@ -104,13 +128,17 @@ app.post('/chat', async (c) => {
     const userInput = await stt(audioBuffer);
     console.log('User input:', userInput);
 
-    const messages = [
-      { role: "system", content: systemPrompt },
+    const currentSystemPrompt = updateSystemPrompt();
+    const chatMessages = [
+      { role: "system", content: currentSystemPrompt },
       { role: "user", content: userInput }
     ];
 
-    const assistantResponse = await chatCompletion(messages);
+    const assistantResponse = await chatCompletion(chatMessages);
     console.log('AI response:', assistantResponse);
+
+    // Append the interaction to messages
+    messages += `User: ${userInput}\nAssistant: ${assistantResponse}\n\n`;
 
     const audioResponse = await tts(assistantResponse || '');
     console.log('Audio response generated, length:', audioResponse.length);
