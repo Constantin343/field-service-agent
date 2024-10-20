@@ -1,0 +1,23 @@
+{
+  "name": "field-service-agent",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "A field-service agent callable via API",
+  "main": "dist/app.js",
+  "scripts": {
+    "start": "node dist/app.js",
+    "build": "tsc",
+    "dev": "tsc -w & node --watch dist/app.js"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.0.0",
+    "dotenv": "^16.0.0",
+    "hono": "^4.0.0",
+    "twilio": "^4.0.0",
+    "openai": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}
