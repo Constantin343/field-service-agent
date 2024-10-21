@@ -190,3 +190,33 @@ serve({
   fetch: app.fetch,
   port: Number(PORT) || 3000
 });
+
+// report generation endpoint
+app.post('/generate-report', async (c) => {
+  try {
+    console.log('Received report generation request');
+
+    const reportPrompt = `Based on the following conversation, generate a comprehensive field service report. Include all relevant details such as customer information, operation description, machine type, duration, issues encountered, and customer satisfaction:
+
+${messages}
+
+Please format the report in a clear, professional manner suitable for documentation purposes.`;
+
+    const reportMessages = [
+      { role: "system", content: "You are an AI assistant tasked with generating detailed field service reports." },
+      { role: "user", content: reportPrompt }
+    ];
+
+    const report = await chatCompletion(reportMessages);
+    console.log('Report generated');
+
+    return c.json({ report });
+  } catch (error) {
+    console.error('Error in report generation:', error);
+    if (error instanceof Error) {
+      return c.json({ error: 'An error occurred during report generation.', details: error.message }, 500);
+    } else {
+      return c.json({ error: 'An unknown error occurred during report generation.' }, 500);
+    }
+  }
+});
